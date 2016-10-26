@@ -11,14 +11,18 @@ var graphicsContext = canvas.getContext('2d');
 //variable that will hold the image of the background
 var background = new Image();
 var enemySprite = new Image();
+var enemyBigSprite = new Image();
+var alien = new Image();
 var laser = new Image();
 var playerAlive = true;
 var jetY=225;
 var deltaY = 0;
 var newEnemy;
 var newShot;
+var bigEnemySpawn = false;
 var newPlayerShot;
 var enemies = [];
+var aliens = [];
 var score = 0;
 var shotList = [];
 /**
@@ -32,6 +36,8 @@ function loadImages() {
     enemySprite.src = 'images/ship.png';
     missile.src = 'images/missile.png';
     laser.src = 'images/laser.png';
+    enemyBigSprite.src = 'images/bigship.png';
+    alien.src = 'images/alien.png';
 }
 function updateBackgroundOffset(currentTime){
     backgroundDx = backgroundDx +2;
@@ -50,92 +56,191 @@ function drawBackground(currentTime) {
     graphicsContext.translate(backgroundDx, 0);
 }
 
-function Enemy(size, x, y){
+function Enemy(size, x, y, health){
     this.enemySize = size;
     this.enemyX = x;
     this.enemyY = y;
+    this.enemyHealth = health;
 }
-
+function Alien(x, y){
+    this.alienX = x;
+    this.alienY = y;
+}
 function Shot(type, x, y){
     this.shotType = type;
     this.shotX = x;
     this.shotY = y;
 }
-var timeForEnemy = true;
 /**
  * drawSprite is the bulkiest method, as it will handle the drawing of all sprites within the game(harambe[the player], banana, and the three SWAT enemies)
  * Along with this, it will handle the collision detection of the sprites, deciding whether a user has scored a point or lost the game.
  * */
 function drawPlayer(currentTime){
-    if(playerAlive == false){
-        document.getElementById("score").innerHTML = "YOU HAVE FAILED...FINAL SCORE: "+score;
+    var newAlien;
+    if((Math.floor(Math.random() * 150) + 1) == 5){
+        bigEnemySpawn = true;
     }
+    //checks to see if player is alive
+    if(playerAlive == false){
+        document.getElementById("score").innerHTML = "YOU HAVE FAILED TO SAVE EARTH...FINAL SCORE: "+score;
+    }
+    //if player is alive
     else{
+        //draw player, jet sprite
         graphicsContext.drawImage(sprite, 20, jetY);
+        var rectJet = {x: 20, y: jetY, width: 50, height: 36};
+        //for every shot in the shot list
+        for(z = 0; z < shotList.length; z++){
+            //puts a rectangle behind it
+            var rectBadShot = {x: shotList[z].shotX, y: shotList[z].shotY, width: 40, height: 10};
+            //if there is a collision
+            if(rectJet.x < rectBadShot.x + rectBadShot.width &&
+                rectJet.x + rectJet.width > rectBadShot.x &&
+                rectJet.y < rectBadShot.y + rectBadShot.height &&
+                rectJet.height + rectJet.y > rectBadShot.y){
+                //if the shot came from an enemy
+                if(shotList[z].shotType == 'enemy'){
+                    playerAlive = false;
+                    shotList.splice(l, 1);
+                }
+            }
+        }
+        for(a = 0; a<aliens.length; a++){
+            var rectAlien = {x: aliens[a].alienX, y: aliens[a].alienY, width: 30, height: 50};
+            if(rectJet.x < rectAlien.x + rectAlien.width &&
+                rectJet.x + rectJet.width > rectAlien.x &&
+                rectJet.y < rectAlien.y + rectAlien.height &&
+                rectJet.height + rectJet.y > rectAlien.y){
+                aliens.splice(a, 1);
+                score = score + 10;
+                document.getElementById("score").innerHTML = "Score: " + score;
+            }
+        }
+        //only six enemies at one time, if less then will spawn more
         if(enemies.length < 6) {
-            newEnemy = new Enemy('small', 977, Math.floor(Math.random() * 506) + 1);
-            enemies.push(newEnemy);
+            //
+            if(bigEnemySpawn == true) {
+                newEnemy = new Enemy('big', 977, Math.floor(Math.random() * 506) + 1, 2);
+                enemies.push(newEnemy);
+                bigEnemySpawn = false;
+            }
+            else {
+                newEnemy = new Enemy('small', 977, Math.floor(Math.random() * 506) + 1, 1);
+                enemies.push(newEnemy);
+            }
         }
         if(enemies.length > 6){
             enemies.length = 6;
         }
         for (i = 0; i < enemies.length; i++) {
-            graphicsContext.drawImage(enemySprite, enemies[i].enemyX, enemies[i].enemyY);
+            if (enemies[i].enemySize == 'big') {
+                graphicsContext.drawImage(enemyBigSprite, enemies[i].enemyX, enemies[i].enemyY);
+            }
+            else {
+                graphicsContext.drawImage(enemySprite, enemies[i].enemyX, enemies[i].enemyY);
+            }
         }
 
         for(j = 0; j < enemies.length; j++) {
             if(enemies[j].enemyX < 0){
                 enemies.splice(j, 1);
             }
-            if(enemies[j].enemySize == 'small'){
-                if(enemies[j].enemyX == 977 || enemies[j].enemyX == 977*0.8 ||
-                    enemies[j].enemyX == 977 * 0.6 || enemies[j].enemyX == 977 * 0.4 || enemies[j].enemyX == 977 * 0.2){
-                    //shoot once
-                    newShot = new Shot('enemy', enemies[j].enemyX, enemies[j].enemyY+22);
-                    shotList.push(newShot);
-                }
+            if(enemies[j].enemyX == 977){
+                newShot = new Shot('enemy', enemies[j].enemyX, enemies[j].enemyY+22);
+                shotList.push(newShot);
             }
-            var rectEnemy = {x: enemies[j].enemyX, y: enemies[j].enemyY, width: 50, height: 44};
-            for(l = 0; l < shotList.length; l++){
-                var rectShot = {x: shotList[l].shotX, y: shotList[l].shotY, width: 40, height: 20};
-                if(rectEnemy.x < rectShot.x + rectShot.width &&
-                    rectEnemy.x + rectEnemy.width > rectShot.x &&
-                    rectEnemy.y < rectShot.y + rectShot.height &&
-                    rectEnemy.height + rectEnemy.y > rectShot.y){
-                    if(shotList[l].shotType == 'player'){
-                        score++;
-                        enemies.splice(j, 1);
-                        shotList.splice(l, 1);
+            if(enemies[j].enemyX == 500){
+                newShot = new Shot('enemy', enemies[j].enemyX, enemies[j].enemyY+22);
+                shotList.push(newShot);
+
+            }
+            //creates rectangle behind small enemy for collision detection
+            if(enemies[j].enemySize == 'small') {
+                var rectEnemy = {x: enemies[j].enemyX, y: enemies[j].enemyY, width: 50, height: 44};
+                for (l = 0; l < shotList.length; l++) {
+                    var rectShot = {x: shotList[l].shotX, y: shotList[l].shotY, width: 40, height: 20};
+                    if (rectEnemy.x < rectShot.x + rectShot.width &&
+                        rectEnemy.x + rectEnemy.width > rectShot.x &&
+                        rectEnemy.y < rectShot.y + rectShot.height &&
+                        rectEnemy.height + rectEnemy.y > rectShot.y) {
+                        if (shotList[l].shotType == 'player') {
+                            enemies[j].enemyHealth = enemies[j].enemyHealth - 1;
+                            if(enemies[j].enemyHealth == 0) {
+                                score = score+1;
+
+                                //when enemy is destroyed, chance for alien to spawn
+                                if((Math.floor(Math.random() * 10)+ 1) == 8){
+                                    newAlien = new Alien(enemies[j].enemyX, enemies[j].enemyY);
+                                    aliens.push(newAlien);
+                                }
+                                enemies.splice(j, 1);
+                            }
+                            shotList.splice(l, 1);
+                            document.getElementById("score").innerHTML = "Score: " + score;
+                        }
                     }
-
-
+                    //if the player collides with an enemy, then the player dies
+                    else if (rectEnemy.x < rectJet.x + rectJet.width &&
+                        rectEnemy.x + rectEnemy.width > rectJet.x &&
+                        rectEnemy.y < rectJet.y + rectJet.height &&
+                        rectEnemy.height + rectEnemy.y > rectJet.y) {
+                        //change playerAlive to false
+                        playerAlive = false;
+                    }
                 }
             }
-            /*else if (enemies[j].enemySize == 'large'){
-                if(enemies[j].enemyX == 977 || enemies[j].enemyX == 977*0.9 ||
-                    enemies[j].enemyX == 977 * 0.8 || enemies[j].enemyX == 977 * 0.7 || enemies[j].enemyX == 977 * 0.6 ||
-                    enemies[j].enemyX == 977 * 0.5 || enemies[j].enemyX == 977* 0.4 ||
-                    enemies[j].enemyX == 977 * 0.3 || enemies[j].enemyX == 977 * 0.2 || enemies[j].enemyX == 977 * 0.1){
-                    //shoot once
+            else{
+                var rectBigEnemy = {x: enemies[j].enemyX, y: enemies[j].enemyY, width: 100, height: 59};
+                for (l = 0; l < shotList.length; l++) {
+                    var rectShot = {x: shotList[l].shotX, y: shotList[l].shotY, width: 40, height: 20};
+                    if (rectBigEnemy.x < rectShot.x + rectShot.width &&
+                        rectBigEnemy.x + rectBigEnemy.width > rectShot.x &&
+                        rectBigEnemy.y < rectShot.y + rectShot.height &&
+                        rectBigEnemy.height + rectBigEnemy.y > rectShot.y) {
+                        if (shotList[l].shotType == 'player') {
+                            enemies[j].enemyHealth = enemies[j].enemyHealth - 1;
+                            if(enemies[j].enemyHealth == 0) {
+                                score = score + 2;
+                                //when enemy is destroyed, chance for alien to spawn
+                                if((Math.floor(Math.random() * 5)+ 1) == 4){
+                                    newAlien = new Alien(enemies[j].enemyX, enemies[j].enemyY);
+                                    aliens.push(newAlien);
+                                }
+                                enemies.splice(j, 1);
+                            }
+                            shotList.splice(l, 1);
+                            document.getElementById("score").innerHTML = "Score: " + score;
+                        }
+                    }
+                    //if the player collides with an enemy, then the player dies
+                    else if (rectBigEnemy.x < rectJet.x + rectJet.width &&
+                        rectBigEnemy.x + rectBigEnemy.width > rectJet.x &&
+                        rectBigEnemy.y < rectJet.y + rectJet.height &&
+                        rectBigEnemy.height + rectBigEnemy.y > rectJet.y) {
+                        //change playerAlive to false
+                        playerAlive = false;
+                    }
                 }
-            }*/
-
+            }
         }
+        //draw aliens
+        for(m = 0; m < aliens.length; m++){
+            graphicsContext.drawImage(alien, aliens[m].alienX, aliens[m].alienY);
+        }
+
+
         //draw shots
         for(k = 0; k <shotList.length; k++){
             if(shotList[k].shotType == 'player'){
                 graphicsContext.drawImage(missile, shotList[k].shotX, shotList[k].shotY);
             }
-            else if(shotList[k].shotType ==  'enemy'){
+            else if(shotList[k].shotType == 'enemy'){
                 graphicsContext.drawImage(laser, shotList[k].shotX, shotList[k].shotY);
             }
         }
     }
 
 }
-
-var bigEnemyTicker = 0;
-
 /**
  * naiveGameLoop will loop while the game is running, altering the coordinates of sprites as they move around the screen.
  * */
@@ -144,10 +249,12 @@ function spriteMove(currentTime){
     for (i = 0; i < enemies.length; i++){
         enemies[i].enemyX = enemies[i].enemyX - 2;
     }
-
+    for(k = 0; k < aliens.length; k++){
+        aliens[k].alienX = aliens[k].alienX - 2;
+    }
     for (j = 0; j < shotList.length; j++){
         if(shotList[j].shotType == 'player'){
-            shotList[j].shotX = shotList[j].shotX + 3;
+            shotList[j].shotX = shotList[j].shotX + 5;
         }
         else{
             shotList[j].shotX = shotList[j].shotX - 3;
