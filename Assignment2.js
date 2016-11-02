@@ -8,19 +8,21 @@ var graphicsContext = canvas.getContext('2d');
 var background = new Image();
 var enemySprite = new Image();
 var enemyBigSprite = new Image();
+var sprite = new Image();
+var missile = new Image();
 var alien = new Image();
 var laser = new Image();
-//player alive variable
+//player alive bool
 var playerAlive = true;
-//initialize jet in middle of screen
+//initial position of jet is middle of screen
 var jetY=225;
 //movement var
 var deltaY = 0;
-//big enemy spawn bool
+//big enemy bool
 var bigEnemySpawn = false;
-//var for handling scrolling backgroun
+//var for scrolling background
 var backgroundDx = 0;
-//enemy alien and shot arrays
+//arrays for enemies, aliens, shots
 var enemies = [];
 var aliens = [];
 var shotList = [];
